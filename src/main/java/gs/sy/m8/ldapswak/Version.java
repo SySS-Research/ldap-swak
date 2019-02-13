@@ -1,4 +1,4 @@
-package gs.sy.m8.ldapswk;
+package gs.sy.m8.ldapswak;
 
 import java.io.IOException;
 import java.net.URL;

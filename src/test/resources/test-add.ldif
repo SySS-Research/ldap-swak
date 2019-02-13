@@ -1,0 +1,10 @@
+dn: dc=test
+objectClass: top
+objectClass: dcObject
+dc: test
+
+dn: cn=foo,dc=test
+objectClass: person
+objectClass: top
+cn: foo
+sn: Test

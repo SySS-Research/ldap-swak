@@ -4,8 +4,16 @@
       <pattern>%d{HH:mm:ss.SSS} %-1level %logger{0} - %msg%n</pattern>
     </encoder>
   </appender>
+  
+  <appender name="RAW" class="ch.qos.logback.core.ConsoleAppender">
+  	<encoder><pattern>%msg%n</pattern></encoder>
+  </appender>
 
-  <root level="debug">
+  <root level="info">
     <appender-ref ref="STDOUT" />
   </root>
+  
+  <logger name="access" level="info" additivity="false">
+  	 <appender-ref ref="RAW" />
+  </logger>
 </configuration>

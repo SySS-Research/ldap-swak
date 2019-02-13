@@ -25,6 +25,11 @@
 			<version>4.0.8</version>
 		</dependency>
 		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcpkix-jdk15on</artifactId>
+			<version>1.61</version>
+		</dependency>
+		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
 			<version>1.7.25</version>
@@ -38,6 +43,11 @@
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
 			<version>${logback.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>4.2.2</version>
 		</dependency>
 	</dependencies>
 
@@ -60,10 +70,10 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>gs.sy.m8.ldapswk.Main</mainClass>
+							<mainClass>gs.sy.m8.ldapswak.Main</mainClass>
 						</manifest>
 						<manifestEntries>
-							<Version>${pom.version}</Version>
+							<Version>${project.version}</Version>
 						</manifestEntries>
 					</archive>
 				</configuration>
