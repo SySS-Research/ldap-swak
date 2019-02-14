@@ -117,11 +117,19 @@ public class BaseCommand {
 	
 	@Option(names = {"--default-schema"}, defaultValue = "true", description = {"Apply a default schema"})
 	boolean defaultSchema; 
+	
+	
+	@Option(names = {"--accept-user"}, defaultValue = "cn=user", description = {"Accept login using this user"})
+	String acceptUser;
+	
+	@Option(names = {"--accept-pass"}, defaultValue = "pass", description = {"Accept login using this pass"})
+	String acceptPass;
+	
 
 	private static final Logger log = LoggerFactory.getLogger(BaseCommand.class);
 	
 	@Inject
-	private SSLContextProvider sslContextProv;
+	SSLContextProvider sslContextProv;
 
 	public BaseCommand() {
 		super();
@@ -149,6 +157,10 @@ public class BaseCommand {
 		ldapcfg.setEnforceSingleStructuralObjectClass(false);
 		ldapcfg.setEnforceAttributeSyntaxCompliance(false);
 	
+		if ( this.acceptUser != null && this.acceptPass != null ) {
+			ldapcfg.addAdditionalBindCredentials(this.acceptUser, this.acceptPass);
+		}
+		
 		return ldapcfg;
 	}
 
@@ -174,16 +186,16 @@ public class BaseCommand {
 	private InMemoryListenerConfig createListenerConfig() throws Exception, LDAPException {
 		if (ssl) {
 			SSLContext ctx = this.sslContextProv.createContext(this);
-			int port = this.port < 0 ? 636 : this.port;
+			this.port = this.port < 0 ? 636 : this.port;
 			return InMemoryListenerConfig.createLDAPSConfig("ssl", bind, port,
 					this.sslContextProv.configure(this,ctx.getServerSocketFactory()),
 					this.sslContextProv.configure(this,ctx.getSocketFactory()));
 		} else if (nostarttls) {
-			int port = this.port < 0 ? 389 : this.port;
+			this.port = this.port < 0 ? 389 : this.port;
 			return InMemoryListenerConfig.createLDAPConfig("starttls", bind, port, null);
 		} else {
 			SSLContext ctx = this.sslContextProv.createContext(this);
-			int port = this.port < 0 ? 389 : this.port;
+			this.port = this.port < 0 ? 389 : this.port;
 			return InMemoryListenerConfig.createLDAPConfig("starttls", bind, port,
 					this.sslContextProv.configure(this,ctx.getSocketFactory()));
 		}

@@ -1,5 +1,6 @@
 package gs.sy.m8.ldapswak;
 
+import java.io.Closeable;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,7 +18,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(name = "fake", description = "Launch fake LDAP server")
-public class FakeServer extends BaseCommand implements CommandRunnable {
+public class FakeServer extends BaseCommand implements CommandRunnable, Closeable {
 	
 	private static final Logger log = LoggerFactory.getLogger(FakeServer.class);
 
@@ -26,6 +27,10 @@ public class FakeServer extends BaseCommand implements CommandRunnable {
 
 	@Option(names = { "--load" }, description = { "LDIF file to load" })
 	Path[] load = new Path[0];
+
+	private InMemoryDirectoryServer service;
+
+	CredentialsOperationInterceptor creds;
 
 	@Override
 	public void run() throws Exception {
@@ -37,7 +42,8 @@ public class FakeServer extends BaseCommand implements CommandRunnable {
 			}
 		}
 
-		ldapcfg.addInMemoryOperationInterceptor(new CredentialsOperationInterceptor(this));
+		creds = new CredentialsOperationInterceptor(this);
+		ldapcfg.addInMemoryOperationInterceptor(creds);
 
 		InMemoryDirectoryServer ds = new InMemoryDirectoryServer(ldapcfg);
 
@@ -51,7 +57,14 @@ public class FakeServer extends BaseCommand implements CommandRunnable {
 		log.info("Starting {} listener on {}:{}", ssl ? "SSL" : (nostarttls ? "plain" : "StartTLS"),
 				bind != null ? bind.getHostAddress() : "*", port);
 
+		this.service = ds;
 		ds.startListening();
 	}
 
+	@Override
+	public void close()  {
+		if ( this.service != null ) {
+			this.service.shutDown(true);
+		}
+	}
 }

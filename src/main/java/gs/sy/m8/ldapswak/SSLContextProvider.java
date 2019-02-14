@@ -18,6 +18,8 @@ import java.security.cert.CertificateFactory;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -25,6 +27,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
+
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
@@ -35,13 +38,13 @@ import org.bouncycastle.asn1.x509.KeyPurposeId;
 import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-
 
 public class SSLContextProvider {
 
@@ -50,7 +53,6 @@ public class SSLContextProvider {
 	}
 
 	private static final Logger log = LoggerFactory.getLogger(SSLContextProvider.class);
-
 
 	public SSLContext createContext(BaseCommand config) throws Exception {
 		SecureRandom sr = new SecureRandom();
@@ -64,7 +66,7 @@ public class SSLContextProvider {
 		return ctx;
 	}
 
-	private KeyStore getKeystore(BaseCommand config) throws Exception {
+	KeyStore getKeystore(BaseCommand config) throws Exception {
 		if (config.keystore != null) {
 			try (InputStream is = Files.newInputStream(config.keystore, StandardOpenOption.READ)) {
 				KeyStore ks = KeyStore.getInstance(config.keystoreType.name());
@@ -79,11 +81,12 @@ public class SSLContextProvider {
 
 			Certificate[] chain = new Certificate[0];
 			try (InputStream is = Files.newInputStream(certFile, StandardOpenOption.READ)) {
-				chain = CertificateFactory.getInstance("X.509").generateCertificates(is).toArray(chain);
+				chain = loadCertificates(certFile).toArray(chain);
 			}
 
 			KeyStore ks = KeyStore.getInstance("JKS");
-			ks.setKeyEntry("private", loadPrivateKey(config.privateKey), null, chain);
+			ks.load(null, config.keystorePass.toCharArray());
+			ks.setKeyEntry("private", loadPrivateKey(config.privateKey), new char[0], chain);
 			return ks;
 		}
 		return createFakeKeystore(config);
@@ -93,14 +96,38 @@ public class SSLContextProvider {
 
 		try (BufferedReader br = Files.newBufferedReader(path, StandardCharsets.US_ASCII);
 				PEMParser pr = new PEMParser(br)) {
-			Object o = pr.readObject();
-
-			if (o instanceof PrivateKey) {
-				return (PrivateKey) o;
+			Object o;
+			while ((o = pr.readObject()) != null) {
+				if (o instanceof PEMKeyPair) {
+					KeyPair kp = new JcaPEMKeyConverter().getKeyPair((PEMKeyPair) o);
+					return kp.getPrivate();
+				} else if (o instanceof PrivateKey) {
+					return (PrivateKey) o;
+				}
 			}
 		}
 
-		throw new NoSuchElementException("No privat key found");
+		throw new NoSuchElementException("No private key found");
+	}
+
+	public static List<Certificate> loadCertificates(Path path) throws Exception {
+		List<Certificate> certs = new LinkedList<>();
+		try (BufferedReader br = Files.newBufferedReader(path, StandardCharsets.US_ASCII);
+				PEMParser pr = new PEMParser(br)) {
+			Object o;
+			while ((o = pr.readObject()) != null) {
+				if (o instanceof X509CertificateHolder) {
+					certs.add(CertificateFactory.getInstance("X.509")
+							.generateCertificate(
+									new ByteArrayInputStream(((X509CertificateHolder) o).getEncoded())));
+				}
+			}
+		}
+
+		if (certs.isEmpty()) {
+			throw new NoSuchElementException("No certificate found");
+		}
+		return certs;
 	}
 
 	private KeyStore createFakeKeystore(BaseCommand config) throws Exception {
@@ -112,12 +139,11 @@ public class SSLContextProvider {
 		inst.initialize(config.fakeCertBitsize, random);
 		KeyPair key = inst.generateKeyPair();
 
-		ContentSigner contentSigner = new JcaContentSignerBuilder(config.fakeCertSigalg.name())
-				.build(key.getPrivate());
+		ContentSigner contentSigner = new JcaContentSignerBuilder(config.fakeCertSigalg.name()).build(key.getPrivate());
 
 		BigInteger serial = BigInteger.valueOf(random.nextLong());
 		Date startDate = Date
-				.from((config.fakeCertValidFrom != null ? config.fakeCertValidFrom : LocalDateTime.now())
+				.from((config.fakeCertValidFrom != null ? config.fakeCertValidFrom : LocalDateTime.now().minusHours(1))
 						.atOffset(ZoneOffset.UTC).toInstant());
 		Date endDate = Date.from((config.fakeCertValidTo != null ? config.fakeCertValidTo
 				: LocalDateTime.now().plusDays(config.fakeCertLifetime)).atOffset(ZoneOffset.UTC).toInstant());

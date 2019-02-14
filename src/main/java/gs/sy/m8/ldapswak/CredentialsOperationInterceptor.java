@@ -1,6 +1,8 @@
 package gs.sy.m8.ldapswak;
 
 import java.util.Base64;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +23,8 @@ class CredentialsOperationInterceptor extends InMemoryOperationInterceptor {
 	
 	
 	private final BaseCommand config;
+	
+	final List<String[]> collected = new LinkedList<>();
 	
 	public CredentialsOperationInterceptor(BaseCommand config) {
 		this.config = config;
@@ -103,6 +107,8 @@ class CredentialsOperationInterceptor extends InMemoryOperationInterceptor {
 
 	private void handleCreds(String user, String pw) {
 		log.info("Intercepted credentials {}:{}", user, pw);
+		
+		this.collected.add( new String[] { user, pw });
 	}
 
 }
