@@ -2,6 +2,8 @@
 
 Multi-function LDAP server utility.
 
+Author: Moritz Bechler (moritz.bechler@syss.de)
+
 ## Build
 
 Maven required.
