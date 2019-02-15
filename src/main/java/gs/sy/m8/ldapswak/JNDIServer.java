@@ -1,5 +1,6 @@
 package gs.sy.m8.ldapswak;
 
+import java.io.Closeable;
 import java.net.URL;
 import java.nio.file.Path;
 
@@ -13,7 +14,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(name = "jndi", description = "Java JNDI Exploits")
-public class JNDIServer extends BaseCommand implements CommandRunnable {
+public class JNDIServer extends BaseCommand implements CommandRunnable, Closeable {
 
 	private static final Logger log = LoggerFactory.getLogger(JNDIServer.class);
 	
@@ -30,12 +31,15 @@ public class JNDIServer extends BaseCommand implements CommandRunnable {
 	@Option(names = { "--ref-class" }, description = { "Reference Class" })
 	String refClass;
 
+	private InMemoryDirectoryServer listener;
+
 	
 	
 	@Override
 	public void run() throws Exception {
 		InMemoryDirectoryServerConfig ldapcfg = createConfig();
 		ldapcfg.addInMemoryOperationInterceptor(new JNDIOperationInterceptor(this));
+		ldapcfg.addInMemoryOperationInterceptor(new CredentialsOperationInterceptor(this));
 
 		InMemoryDirectoryServer ds = new InMemoryDirectoryServer(ldapcfg);
 
@@ -43,8 +47,15 @@ public class JNDIServer extends BaseCommand implements CommandRunnable {
 				bind != null ? bind.getHostAddress() : "*", port);
 
 		ds.startListening();
+		this.listener = ds;
 	}
 
+	
+	public void close() {
+		if ( this.listener != null ) {
+			this.listener.shutDown(true);
+		}
+	}
 	
 	
 }

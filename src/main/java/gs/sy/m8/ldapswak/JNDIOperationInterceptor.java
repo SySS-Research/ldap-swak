@@ -54,16 +54,17 @@ public class JNDIOperationInterceptor extends InMemoryOperationInterceptor {
 	private void sendReferral(InMemoryInterceptedSearchResult result, String base, Entry e)
 			throws LDAPException, MalformedURLException {
 		String ref = this.jndiServer.referral;
-		log.info("Sending refferal to {}", ref);
+		log.info("Sending referral to {}", ref);
 		result.sendSearchReference(new SearchResultReference(new String[] { ref }, new Control[] {}));
-		result.setResult(new LDAPResult(0, ResultCode.SUCCESS));
+		result.setResult(new LDAPResult(0, ResultCode.REFERRAL));
 	}
 
 	private void sendCodebaseResult(InMemoryInterceptedSearchResult result, String base, Entry e)
 			throws LDAPException, MalformedURLException {
 		e.addAttribute("javaCodeBase", this.jndiServer.refCodebase.toString());
-		e.addAttribute("objectClass", "javaNamingReference"); //$NON-NLS-1$
+		e.addAttribute("objectClass","javaNamingReference"); //$NON-NLS-1$
 		e.addAttribute("javaFactory", this.jndiServer.refClass);
+		e.addAttribute("javaClassName", "Fake");
 		result.sendSearchEntry(e);
 		result.setResult(new LDAPResult(0, ResultCode.SUCCESS));
 	}
@@ -80,6 +81,7 @@ public class JNDIOperationInterceptor extends InMemoryOperationInterceptor {
 		}		
 		e.addAttribute("objectClass", "javaSerializedData"); //$NON-NLS-1$
 		e.addAttribute("javaSerializedData", data);
+		e.addAttribute("javaClassName", "Fake");
 		result.sendSearchEntry(e);
 		result.setResult(new LDAPResult(0, ResultCode.SUCCESS));
 	}

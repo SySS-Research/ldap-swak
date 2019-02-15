@@ -1,5 +1,10 @@
 package gs.sy.m8.ldapswak;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,19 +23,16 @@ import com.unboundid.ldap.sdk.RDN;
 
 class CredentialsOperationInterceptor extends InMemoryOperationInterceptor {
 
-	
 	private static Logger log = LoggerFactory.getLogger(CredentialsOperationInterceptor.class);
-	
-	
+
 	private final BaseCommand config;
-	
+
 	final List<String[]> collected = new LinkedList<>();
-	
+
 	public CredentialsOperationInterceptor(BaseCommand config) {
 		this.config = config;
 	}
 
-	
 	@Override
 	public void processSASLBindRequest(InMemoryInterceptedSASLBindRequest request) throws LDAPException {
 		GenericSASLBindRequest r = request.getRequest();
@@ -107,8 +109,18 @@ class CredentialsOperationInterceptor extends InMemoryOperationInterceptor {
 
 	private void handleCreds(String user, String pw) {
 		log.info("Intercepted credentials {}:{}", user, pw);
-		
-		this.collected.add( new String[] { user, pw });
+
+		this.collected.add(new String[] { user, pw });
+
+		if (config.writeCreds != null) {
+			try (Writer wr = Files.newBufferedWriter(config.writeCreds, StandardCharsets.UTF_8,
+					StandardOpenOption.APPEND)) {
+				wr.write(String.format("%s %s\n", user, pw));
+			} catch (IOException e) {
+				log.error("Failed to write credential file", e);
+			}
+
+		}
 	}
 
 }

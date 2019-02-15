@@ -4,18 +4,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.SecureRandom;
-import java.util.Random;
+import java.util.List;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 
+import org.hamcrest.collection.IsCollectionWithSize;
 import org.hamcrest.core.IsIterableContaining;
 import org.junit.jupiter.api.Test;
 
@@ -28,24 +29,7 @@ import com.unboundid.ldap.sdk.ResultCode;
 import com.unboundid.ldap.sdk.SearchResultEntry;
 import com.unboundid.ldap.sdk.StartTLSPostConnectProcessor;
 
-class TLSSetupTests {
-
-	private static final InetAddress LOCALHOST;
-
-	static {
-		InetAddress lc;
-		try {
-			lc = InetAddress.getLocalHost();
-		} catch (Exception e) {
-			try {
-				lc = InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 });
-			} catch (UnknownHostException e1) {
-				lc = null;
-			}
-		}
-
-		LOCALHOST = lc;
-	}
+class FakeServerTest extends BaseServerTest {
 
 	@Test
 	void testConnection() throws Exception {
@@ -111,14 +95,15 @@ class TLSSetupTests {
 		try {
 			st.waitStart();
 			try (LDAPConnection lc = new LDAPConnection(LOCALHOST.getHostAddress(), st.command.port)) {
-				lc.bind("cn=test", "test");				
+				lc.bind("cn=test", "test");
 
-			} catch (LDAPException e ) {
-				if ( e.getResultCode() != ResultCode.INVALID_CREDENTIALS ) {
+			} catch (LDAPException e) {
+				if (e.getResultCode() != ResultCode.INVALID_CREDENTIALS) {
 					throw e;
 				}
 			}
-			assertThat(st.command.creds.collected, IsIterableContaining.hasItem(equalTo(new String[] { "cn=test", "test" })));
+			assertThat(st.command.creds.collected,
+					IsIterableContaining.hasItem(equalTo(new String[] { "cn=test", "test" })));
 		} finally {
 			st.shutdown();
 		}
@@ -135,12 +120,13 @@ class TLSSetupTests {
 			try (LDAPConnection lc = new LDAPConnection(LOCALHOST.getHostAddress(), st.command.port)) {
 				lc.bind("cn=test", "test");
 			}
-			assertThat(st.command.creds.collected, IsIterableContaining.hasItem(equalTo(new String[] { "cn=test", "test" })));
+			assertThat(st.command.creds.collected,
+					IsIterableContaining.hasItem(equalTo(new String[] { "cn=test", "test" })));
 		} finally {
 			st.shutdown();
 		}
 	}
-	
+
 	@Test
 	void testExtractUser() throws Exception {
 		FakeServer c = createServerBase();
@@ -154,7 +140,8 @@ class TLSSetupTests {
 			try (LDAPConnection lc = new LDAPConnection(LOCALHOST.getHostAddress(), st.command.port)) {
 				lc.bind(dn, "test");
 			}
-			assertThat(st.command.creds.collected, IsIterableContaining.hasItem(equalTo(new String[] { "foobar", "test" })));
+			assertThat(st.command.creds.collected,
+					IsIterableContaining.hasItem(equalTo(new String[] { "foobar", "test" })));
 		} finally {
 			st.shutdown();
 		}
@@ -181,17 +168,33 @@ class TLSSetupTests {
 		}
 	}
 
-	private FakeServer createServerBase() throws UnknownHostException {
-		FakeServer fs = new FakeServer();
-		fs.sslContextProv = new SSLContextProvider();
-		fs.baseDN = new String[] { "cn=test" };
-		fs.port = new Random().nextInt(2 * Short.MAX_VALUE + 1);
-		fs.bind = InetAddress.getLocalHost();
-		fs.fakeCertBitsize = 2048;
-		fs.fakeCertSigalg = SigAlg.SHA256withRSA;
-		fs.fakeCertCN = "cn=testCert";
-		fs.keystorePass = "changeit";
-		return fs;
+	@Test
+	void testWriteCreds() throws Exception {
+		Path t = Files.createTempFile("pw", ".list");
+		try {
+			FakeServer c = createServerBase();
+			String dn = "uid=foobar";
+			c.uidAttrs = new String[] { "uid" };
+			c.acceptUser = dn;
+			c.acceptPass = "test";
+			c.writeCreds = t;
+			ServerThread<FakeServer> st = new ServerThread<>(c);
+			try {
+				st.waitStart();
+				try (LDAPConnection lc = new LDAPConnection(LOCALHOST.getHostAddress(), st.command.port)) {
+					lc.bind(dn, "test");
+				}
+			} finally {
+				st.shutdown();
+			}
+
+			List<String> lines = Files.readAllLines(t, StandardCharsets.UTF_8);
+
+			assertThat(lines, IsCollectionWithSize.hasSize(1));
+			assertThat(lines, IsIterableContaining.hasItem("foobar test"));
+		} finally {
+			Files.deleteIfExists(t);
+		}
 	}
 
 }

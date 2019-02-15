@@ -1,11 +1,13 @@
 package gs.sy.m8.ldapswak;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,29 +30,35 @@ import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.ldap.sdk.PostConnectProcessor;
 import com.unboundid.ldap.sdk.ResultCode;
 import com.unboundid.ldap.sdk.ServerSet;
+import com.unboundid.ldap.sdk.StartTLSPostConnectProcessor;
 import com.unboundid.util.StaticUtils;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(name = "proxy", description = "Launch proxy LDAP server")
-public class ProxyServer extends BaseCommand implements CommandRunnable {
+public class ProxyServer extends BaseCommand implements CommandRunnable, Closeable {
 
 	private static final Logger log = LoggerFactory.getLogger(ProxyServer.class);
 
 	@Option(names = { "--srv" }, description = { "Connect to backend servers resolved using a DNS SRV record" })
 	String proxySRV;
 
-	@Option(names = { "--server" })
+	@Option(names = { "--server" }, description = {"Backend servers to connect to"} )
 	String[] proxyServers;
 
+	@Option(names = { "--proxy-ssl" }, description = {"Connect to backend servers using SSL"} )
 	boolean proxySSL;
+	
+	@Option(names = { "--proxy-starttls" }, description = {"Connect to backend servers using StartTLS"} )
+	boolean proxyStartTLS;
+
+	private LinkedHashMap<String, LDAPListener> listeners;
 
 	@Override
 	public void run() throws Exception {
 
 		InMemoryDirectoryServerConfig ldapcfg = createConfig();
-		ldapcfg.addInMemoryOperationInterceptor(new ProxyInterceptor(this));
 		ldapcfg.addInMemoryOperationInterceptor(new CredentialsOperationInterceptor(this));
 
 		if (requestLog) {
@@ -66,11 +74,20 @@ public class ProxyServer extends BaseCommand implements CommandRunnable {
 
 	}
 
-	private ServerSet createServerSet() {
+	private ServerSet createServerSet() throws Exception {
 		SocketFactory socketFactory = null;
-		LDAPConnectionOptions connectionOptions = null;
+		LDAPConnectionOptions connectionOptions = new LDAPConnectionOptions();
 		BindRequest bindRequest = null;
 		PostConnectProcessor postConnectProcessor = null;
+
+		if (proxySSL) {
+			SSLContext ctx = sslContextProv.createContext(this);
+			socketFactory = sslContextProv.configure(this, ctx.getSocketFactory());
+		} else if (proxyStartTLS) {
+			SSLContext ctx = sslContextProv.createContext(this);
+			postConnectProcessor = new StartTLSPostConnectProcessor(
+					sslContextProv.configure(this, ctx.getSocketFactory()));
+		}
 
 		if (proxySRV != null) {
 			return new DNSSRVRecordServerSet(proxySRV, null, null, -1, socketFactory, connectionOptions, bindRequest,
@@ -89,18 +106,18 @@ public class ProxyServer extends BaseCommand implements CommandRunnable {
 		for (int i = 0; i < proxyServers.length; i++) {
 			String spec = proxyServers[i];
 			String host = null;
+			int pport;
 			int sep = spec.indexOf(':');
 			if (sep < 0) {
 				host = spec;
-				port = defPort;
+				pport = defPort;
 			} else {
 				host = spec.substring(0, sep);
-				port = Integer.parseInt(spec.substring(sep + 1));
+				pport = Integer.parseInt(spec.substring(sep + 1));
 			}
 			hosts[i] = host;
-			ports[i] = port;
+			ports[i] = pport;
 		}
-
 		return new FailoverServerSet(hosts, ports, socketFactory, connectionOptions, bindRequest, postConnectProcessor);
 	}
 
@@ -151,6 +168,7 @@ public class ProxyServer extends BaseCommand implements CommandRunnable {
 			}
 		}
 		startListening(listeners, ldapListenerConfigs);
+		this.listeners = listeners;
 	}
 
 	private void startListening(LinkedHashMap<String, LDAPListener> listeners,
@@ -181,5 +199,16 @@ public class ProxyServer extends BaseCommand implements CommandRunnable {
 		if (!messages.isEmpty()) {
 			throw new LDAPException(ResultCode.LOCAL_ERROR, StaticUtils.concatenateStrings(messages));
 		}
+	}
+
+	public void close() {
+		for (final LDAPListener l : listeners.values()) {
+			try {
+				l.shutDown(true);
+			} catch (final Exception e) {
+			}
+		}
+
+		listeners.clear();
 	}
 }

@@ -19,6 +19,11 @@ public class Main {
 		CommandLine cli = new CommandLine(mainCommand, new GuiceFactory(injector));
 		List<CommandLine> parsed = cli.parse(args);
 		
+		if ( parsed.size() == 1 ) {
+			parsed.get(0).usage(System.out);
+			return;
+		}
+		
 		for (CommandLine p : parsed) {
 		    if (p.isUsageHelpRequested()) {
 		        p.usage(System.out);
