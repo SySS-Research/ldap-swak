@@ -98,12 +98,15 @@ Additional options:
             (if the server is not run --schemaless a basic default schema is applied)
 ```
 
+```
 > java -jar target/ldap-swak-0.0.1-SNAPSHOT-all.jar fake -p 1389
 12:52:32.484 INFO FakeServer - Starting StartTLS listener on *:1389
+
 > ldapsearch -H ldap://localhost:1389/ -ZZ -x -D cn=test -w test
 ldap_bind: Invalid credentials (49)
 
 => 12:53:35.653 INFO CredentialsOperationInterceptor - Intercepted credentials cn=test:test
+```
 
 ### proxy - Proxy Server
 Forward all requests to a set of target servers. 
