@@ -124,6 +124,27 @@ public class BaseCommand {
 			"Write intercepted credentials to this file (format: user pass, one per line)" })
 	Path writeCreds;
 
+	@Option(names = { "--ntlm-relay" }, description = { "Relay intecepted NTLM exchange to SMB server for PSExec" })
+	String relayServer;
+	
+	@Option(names = { "--psexec-service-name" }, description = { "Name of service used for PSExec" })
+	String psexecServiceName = "psexec";
+
+	@Option(names = { "--psexec-display-name" }, description = { "Display name of service used for PSExec" })
+	String psexecDisplayName = "PSExec";
+
+	@Option(names = { "--psexec-cmd" }, description = { "Run system command using PSExec" })
+	String psexecCMD;
+
+	@Option(names = { "--psexec-script-file" }, description = { "Run Powershell code from script file using PSExec (size limits apply)" })
+	Path psexecPSHScriptFile;
+
+	@Option(names = { "--psexec-script" }, description = { "Run Powershell code using PSExec (size limits apply)" })
+	String psexecPSHScript;
+	
+	@Option(names = { "--psexec-psh-encode" }, description = { "Encode PSExec Powershell Payload" })
+	boolean psexecPSHEncode;
+
 	private static final Logger log = LoggerFactory.getLogger(BaseCommand.class);
 
 	@Inject
@@ -168,8 +189,8 @@ public class BaseCommand {
 			public void connectionTerminated(LDAPListenerClientConnection connection, LDAPException cause) {
 				if (cause != null) {
 					if (cause.getCause() instanceof IOException
-							&& ("Socket closed".equals(cause.getCause().getMessage()) || 
-									"Stream closed".equals(cause.getCause().getMessage()))) {
+							&& ("Socket closed".equals(cause.getCause().getMessage())
+									|| "Stream closed".equals(cause.getCause().getMessage()))) {
 						return;
 					}
 					SocketAddress remote = connection.getSocket().getRemoteSocketAddress();

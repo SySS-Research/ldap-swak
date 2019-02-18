@@ -37,35 +37,53 @@ class CredentialsOperationInterceptor extends InMemoryOperationInterceptor {
 	public void processSASLBindRequest(InMemoryInterceptedSASLBindRequest request) throws LDAPException {
 		GenericSASLBindRequest r = request.getRequest();
 		if ("PLAIN".equalsIgnoreCase(r.getSASLMechanismName())) {
-			String creds = r.getCredentials().stringValue();
-			String authId, authzId, pw;
-
-			int sep = creds.indexOf('\0');
-			if (sep < 0) {
-				log.warn("Unexpected SASL plain credential format");
-				super.processSASLBindRequest(request);
+			if ( ! handlePlain(request, r)) {
 				return;
 			}
-
-			int sep2 = creds.indexOf('\0', sep + 1);
-			if (sep2 < 0) {
-				authId = creds.substring(0, sep);
-				pw = creds.substring(sep + 1);
-			} else {
-				authzId = creds.substring(0, sep);
-				log.debug("SASL authzId {}", authzId);
-				authId = creds.substring(sep + 1, sep2);
-				pw = creds.substring(sep2 + 1);
+		} else if ( "NTLM".equalsIgnoreCase(r.getSASLMechanismName())) {
+			if ( !handleNTLM(request)) {
+				return;
 			}
-
-			log.debug("SASL PLAIN {}:{}", authId, pw);
-			handleCreds(authId, pw);
 		} else {
 			log.debug("SASL " + r.getBindType() + " bind " + r.getBindDN() + " "
 					+ Base64.getEncoder().encodeToString(r.getCredentials().getValue()));
 		}
 
 		super.processSASLBindRequest(request);
+	}
+
+	private boolean handlePlain(InMemoryInterceptedSASLBindRequest request, GenericSASLBindRequest r)
+			throws LDAPException {
+		String creds = r.getCredentials().stringValue();
+		String authId, authzId, pw;
+
+		int sep = creds.indexOf('\0');
+		if (sep < 0) {
+			log.warn("Unexpected SASL plain credential format");
+			super.processSASLBindRequest(request);
+			return false;
+		}
+
+		int sep2 = creds.indexOf('\0', sep + 1);
+		if (sep2 < 0) {
+			authId = creds.substring(0, sep);
+			pw = creds.substring(sep + 1);
+		} else {
+			authzId = creds.substring(0, sep);
+			log.debug("SASL authzId {}", authzId);
+			authId = creds.substring(sep + 1, sep2);
+			pw = creds.substring(sep2 + 1);
+		}
+
+		log.debug("SASL PLAIN {}:{}", authId, pw);
+		handleCreds(authId, pw);
+		return true;
+	}
+
+	private boolean handleNTLM(InMemoryInterceptedSASLBindRequest request) {
+		byte[] v = request.getRequest().getCredentials().getValue();
+		log.debug("SASL NTLM " + v.length);
+		return false;
 	}
 
 	@Override

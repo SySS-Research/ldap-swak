@@ -44,6 +44,10 @@ public class FakeServer extends BaseCommand implements CommandRunnable, Closeabl
 
 		creds = new CredentialsOperationInterceptor(this);
 		ldapcfg.addInMemoryOperationInterceptor(creds);
+		
+		if ( this.relayServer != null ) {
+			ldapcfg.addSASLBindHandler(new PassTheHashNTLMSASLBindHandler(this));
+		}
 
 		InMemoryDirectoryServer ds = new InMemoryDirectoryServer(ldapcfg);
 
