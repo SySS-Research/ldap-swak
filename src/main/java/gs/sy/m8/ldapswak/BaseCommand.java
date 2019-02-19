@@ -127,28 +127,62 @@ public class BaseCommand {
 	@Option(names = { "--ntlm-relay" }, description = { "Relay intecepted NTLM exchange to SMB server for PSExec" })
 	String relayServer;
 	
+	
+	@Option(names = { "--relay-write-file" }, description = { "Using the relayed credentials, write this local file to the server" })
+	Path writeFileSource;
+	
+	@Option(names = { "--relay-write-to" }, description = { "Using the relayed credentials, write file to this target share/path (SHARE/path/)" })
+	String writeFileTarget;
+	
 	@Option(names = { "--psexec-service-name" }, description = { "Name of service used for PSExec" })
 	String psexecServiceName = "psexec";
 
 	@Option(names = { "--psexec-display-name" }, description = { "Display name of service used for PSExec" })
 	String psexecDisplayName = "PSExec";
 
-	@Option(names = { "--psexec-cmd" }, description = { "Run system command using PSExec" })
+	@Option(names = { "--psexec-cmd" }, description = { "Using the relayed credentials, run system command using PSExec" })
 	String psexecCMD;
+	
+	@Option(names = { "--psexec-cmd-log" }, description = { "Redirect CMD command output to file (filesystem path)" })
+	String psexecCMDLog;
 
-	@Option(names = { "--psexec-script-file" }, description = { "Run Powershell code from script file using PSExec (size limits apply)" })
+	@Option(names = { "--psexec-script-file" }, description = { "Using the relayed credentials, run Powershell code from script file using PSExec (size limits apply)" })
 	Path psexecPSHScriptFile;
 
-	@Option(names = { "--psexec-script" }, description = { "Run Powershell code using PSExec (size limits apply)" })
+	@Option(names = { "--psexec-script" }, description = { "Using the relayed credentials, run Powershell code using PSExec (size limits apply)" })
 	String psexecPSHScript;
 	
 	@Option(names = { "--psexec-psh-encode" }, description = { "Encode PSExec Powershell Payload" })
 	boolean psexecPSHEncode;
+	
+	@Option(names = { "--psexec-cmd-script-loc" }, defaultValue = "/ADMIN$/Temp/", showDefaultValue = Visibility.ALWAYS, description = { "SHARE/Path for launcher script file used for output redirection" })
+	String psexecCMDScriptLoc;
+	
+	@Option(names = { "--psexec-cmd-script-path" }, defaultValue = "C:\\Windows\\Temp\\", showDefaultValue = Visibility.ALWAYS, description = { "Local filesystem for launcher script file used for output redirection" })
+	String psexecCMDScriptPath;
+
+	@Option(names = { "--relay-read-from" }, description = { "Using the relayed credentials, read file from this target share/path (SHARE/path/)" })
+	String readFileSource;
+	
+	@Option(names = { "--relay-read-to" }, description = {"Local file to store the read file data, leave empty for stdout"})
+	Path readFileTarget;
+	
+	
+	@Option(names = { "--relay-read-charset"}, defaultValue ="UTF-8",showDefaultValue = Visibility.ALWAYS, description = {"Charset for reading remote files, only relevant when outputting"})
+	String readFileCharset;
+	
+	
+	
 
 	private static final Logger log = LoggerFactory.getLogger(BaseCommand.class);
 
 	@Inject
 	SSLContextProvider sslContextProv;
+
+	
+
+	
+
 
 	public BaseCommand() {
 		super();

