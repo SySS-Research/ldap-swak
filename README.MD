@@ -1,22 +1,26 @@
 # LDAP Swiss Army Knife
 
 Multi-function LDAP server utility.
+Quickly setup LDAP server for testing purposes, MitM proxies for 
+intercepting plaintext or forwarding NTLM credentials or exploit
+various Java JNDI/LDAP Client vulnerabilities.
 
 Author: Moritz Bechler (moritz.bechler@syss.de)
+Project Repository: https://github.com/SySS-Research/ldap-swak
 
 ## Build
 
 Maven required.
 > mvn package verify
 
--> target/ldap-swak-0.0.1-SNAPSHOT-all.jar
+-> target/ldap-swak-0.0.3-SNAPSHOT-all.jar
 
 
 ## Run
 
-Just run the JAR file with approriate options:
+Just run the JAR file with approriate subcommand and options:
 ```
-> java -jar target/ldap-swak-0.0.1-SNAPSHOT-all.jar 
+> java -jar target/ldap-swak-0.0.3-SNAPSHOT-all.jar 
 [...]
 LDAP Swiss Army Knife
       --accept-pass=<acceptPass>
@@ -194,8 +198,8 @@ For all requests return a JNDI reference object witha ObjectFactory from
 the specified classpath. When a JNDI client makes a request with lookup() 
 semantics, this class is loaded and thereby code execution is achieved.
 
-The remote classloading has been disabled by default 
-starting with Java 11.0.1, 8u191, 7u201, and 6u211.
+The remote classloading has been disabled by default starting with 
+Java 11.0.1, 8u191, 7u201, and 6u211 (CVE-2018-3149).
 
 #### Referral
 

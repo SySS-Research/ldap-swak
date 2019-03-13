@@ -4,9 +4,31 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>m8.sy.gs</groupId>
 	<artifactId>ldap-swak</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.3-SNAPSHOT</version>
 	<name>LDAP Swiss Army Knife</name>
 
+	<description>Multi-function LDAP server utility.</description>
+
+	<url>https://github.com/SySS-Research/ldap-swak</url>
+	<inceptionYear>2019</inceptionYear>
+	<organization>
+			<name>SySS GmbH</name>
+			<url>https://www.syss.de/</url>
+	</organization>
+
+	<developers>
+		<developer>
+				<name>Moritz Bechler</name>
+				<email>moritz.bechler@syss.de</email>
+		</developer>
+	</developers>
+
+
+	<licenses>
+		<license>
+			<name>MIT License</name>
+		</license>	
+	</licenses>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
