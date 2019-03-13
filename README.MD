@@ -87,6 +87,10 @@ LDAP Swiss Army Knife
       --relay-read-from=<readFileSource>
                              Using the relayed credentials, read file from this
                                target share/path (SHARE/path/)
+      --relay-read-retries=<readFileRetries>
+                             Number of retries reading the file, possibly waiting
+                               for the command to complete, each 1 second apart
+                               Default: 5
       --relay-read-to=<readFileTarget>
                              Local file to store the read file data, leave empty for
                                stdout

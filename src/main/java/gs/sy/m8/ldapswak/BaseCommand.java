@@ -171,13 +171,15 @@ public class BaseCommand {
 	@Option(names = { "--relay-read-charset"}, defaultValue ="UTF-8",showDefaultValue = Visibility.ALWAYS, description = {"Charset for reading remote files, only relevant when outputting"})
 	String readFileCharset;
 	
-	
+	@Option(names = { "--relay-read-retries"}, defaultValue ="5",showDefaultValue = Visibility.ALWAYS, description = {"Number of retries reading the file, possibly waiting for the command to complete, each 1 second apart"})
+	int readFileRetries = 5;
 	
 
 	private static final Logger log = LoggerFactory.getLogger(BaseCommand.class);
 
 	@Inject
 	SSLContextProvider sslContextProv;
+
 
 	
 
