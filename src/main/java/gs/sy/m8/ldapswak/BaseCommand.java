@@ -49,7 +49,7 @@ public class BaseCommand {
 			"Port to bind to (defaults: 389 for normal, 636 for SSL)" })
 	int port;
 
-	@Option(names = { "--ssl" }, defaultValue = "false", description = { "Run a SSL/TLS listener" })
+	@Option(names = { "--tls", "--ssl" }, defaultValue = "false", description = { "Run a SSL/TLS listener" })
 	boolean ssl;
 
 	@Option(names = { "--nostarttls" }, defaultValue = "false", description = { "Disable StartTLS" })
@@ -62,7 +62,7 @@ public class BaseCommand {
 			"see https://docs.oracle.com/javase/9/docs/specs/security/standard-names.html" })
 	public String[] tlsCiphers;
 
-	@Option(names = { "--server-base-dn" }, defaultValue = "dc=fake", description = { "Base DNs to report" })
+	@Option(names = { "--server-base-dn" }, defaultValue = "dc=fake", showDefaultValue = Visibility.ALWAYS, description = { "Base DNs to report" })
 	String[] baseDN;
 
 	@Option(names = { "--keystore" }, description = { "Keystore to load key/certificate from" })
@@ -191,9 +191,7 @@ public class BaseCommand {
 	}
 
 	protected InMemoryDirectoryServerConfig createConfig() throws LDAPException, Exception, IOException, LDIFException {
-		if (log.isDebugEnabled()) {
-			log.debug("Server base DNs: {}", Arrays.toString(baseDN));
-		}
+		log.info("Server base DNs: {}", Arrays.toString(baseDN));
 
 		InMemoryDirectoryServerConfig ldapcfg = new InMemoryDirectoryServerConfig(baseDN);
 

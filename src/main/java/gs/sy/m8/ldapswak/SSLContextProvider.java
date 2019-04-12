@@ -143,7 +143,7 @@ public class SSLContextProvider {
 
 		BigInteger serial = BigInteger.valueOf(random.nextLong());
 		Date startDate = Date
-				.from((config.fakeCertValidFrom != null ? config.fakeCertValidFrom : LocalDateTime.now().minusHours(1))
+				.from((config.fakeCertValidFrom != null ? config.fakeCertValidFrom : LocalDateTime.now().minusHours(3))
 						.atOffset(ZoneOffset.UTC).toInstant());
 		Date endDate = Date.from((config.fakeCertValidTo != null ? config.fakeCertValidTo
 				: LocalDateTime.now().plusDays(config.fakeCertLifetime)).atOffset(ZoneOffset.UTC).toInstant());
