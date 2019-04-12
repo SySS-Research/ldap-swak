@@ -30,6 +30,12 @@ public class JNDIServer extends BaseCommand implements CommandRunnable, Closeabl
 	
 	@Option(names = { "--ref-class" }, description = { "Reference Class" })
 	String refClass;
+	
+	@Option(names = { "--ref-address"}, description = { "Reference address"})
+	String refAddress[];
+	
+	@Option(names = { "--ref-factory"}, description = { "Reference factory class"})
+	String refFactory;
 
 	private InMemoryDirectoryServer listener;
 
