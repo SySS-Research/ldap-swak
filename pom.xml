@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>m8.sy.gs</groupId>
 	<artifactId>ldap-swak</artifactId>
-	<version>0.0.3-SNAPSHOT</version>
+	<version>0.0.5-SNAPSHOT</version>
 	<name>LDAP Swiss Army Knife</name>
 
 	<description>Multi-function LDAP server utility.</description>
@@ -39,17 +39,17 @@
 		<dependency>
 			<groupId>info.picocli</groupId>
 			<artifactId>picocli</artifactId>
-			<version>3.9.3</version>
+			<version>3.9.6</version>
 		</dependency>
 		<dependency>
 			<groupId>com.unboundid</groupId>
 			<artifactId>unboundid-ldapsdk</artifactId>
-			<version>4.0.8</version>
+			<version>4.0.10</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcpkix-jdk15on</artifactId>
-			<version>1.59</version>
+			<version>1.61</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

